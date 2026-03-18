@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome - DataForge Pioneers</title>
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+
+    <script>
+      if (localStorage.getItem("dataforge_theme") === "dark") {
+        document.documentElement.classList.add("dark-theme");
+      }
+    </script>
+
+    <style>
+      :root {
+        --bg-primary: #faf9f6;
+        --input-bg: #eaeaea;
+        --input-focus-bg: #ffffff;
+        --text-main: #333333;
+        --accent-color: #2d2d2d;
+        --border-color: #e5e7eb;
+      }
+
+      /* Dark Mode Variables */
+      html.dark-theme body {
+        --bg-primary: #121212;
+        --input-bg: #1e1e1e;
+        --input-focus-bg: #2a2a2a;
+        --text-main: #e0e0e0;
+        --accent-color: #4a90e2;
+        --border-color: #333333;
+      }
+
+      body {
+        background-color: var(--bg-primary);
+        color: var(--text-main);
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        transition: background-color 0.3s, color 0.3s;
+      }
+
+      /* Top Right Controls (Groups the toggle and register button) */
+      .top-controls {
+        position: absolute;
+        top: 24px;
+        right: 24px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      #theme-toggle {
+        background: var(--input-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+        border-radius: 50%;
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: 0.3s;
+      }
+
+      #toggle-view-btn {
+        background: transparent;
+        border: 2px solid var(--accent-color);
+        color: var(--accent-color);
+        padding: 0 16px;
+        height: 44px; /* Matches the theme toggle height perfectly */
+        border-radius: 50px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      #toggle-view-btn:hover {
+        background: var(--accent-color);
+        color: white;
+      }
+
+      .auth-card {
+        background: var(--input-focus-bg);
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+        border: 1px solid var(--border-color);
+        transition: background-color 0.3s, border 0.3s;
+      }
+
+      .auth-card h2 {
+        margin-top: 0;
+        margin-bottom: 24px;
+        font-size: 24px;
+      }
+      .input-group {
+        margin-bottom: 16px;
+        text-align: left;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background-color: var(--input-bg);
+        color: var(--text-main);
+        font-size: 16px;
+        box-sizing: border-box;
+        outline: none;
+        transition: background-color 0.3s, border 0.3s, color 0.3s;
+      }
+
+      .input-group input:focus {
+        background-color: var(--input-focus-bg);
+        border-color: var(--accent-color);
+      }
+
+      #confirm-password-group {
+        display: none;
+      }
+
+      .submit-btn {
+        width: 100%;
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: transform 0.2s ease, background-color 0.3s;
+        margin-top: 10px;
+      }
+      .submit-btn:hover {
+        transform: scale(1.02);
+      }
+
+      .error-msg {
+        color: #d93025;
+        font-size: 14px;
+        margin-bottom: 16px;
+        display: none;
+      }
+
+      .server-error {
+        color: #D8000C; background-color: #FFBABA; padding: 10px;
+        border-radius: 6px; font-size: 14px; margin-bottom: 16px;
+        display: <%= typeof error !== 'undefined' && error ? 'block' : 'none' %>;
+      }
+      html.dark-theme .server-error {
+        background-color: #4a0000; color: #ffbaba; border: 1px solid #D8000C;
+      }
+
+      .footer {
+        position: absolute;
+        bottom: 24px;
+        font-size: 13px;
+        color: #888;
+        text-align: center;
+        width: 100%;
+      }
+      .footer span {
+        font-weight: bold;
+        color: var(--accent-color);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      style="
+        position: fixed;
+        top: 24px;
+        left: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: bold;
+        font-size: 20px;
+        z-index: 1000;
+        color: var(--text-main);
+      "
+    >
+      <img
+        src="/logo.svg"
+        onerror="this.src = '/logo.png'"
+        alt="DataForge Logo"
+        style="
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          object-fit: cover;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        "
+      />
+      DataForge Pioneers
+    </div>
+
+    <div class="top-controls">
+      <button id="theme-toggle" title="Toggle Dark Mode">🌙</button>
+      <button id="toggle-view-btn">Switch to Register</button>
+    </div>
+
+    <div class="auth-card">
+      <h2 id="form-title">Login to Dashboard</h2>
+
+      <div class="server-error">
+        <%= typeof error !== 'undefined' ? error : '' %>
+      </div>
+      <div class="error-msg" id="error-msg">Passwords do not match.</div>
+
+      <form id="auth-form" action="/login" method="POST">
+        <div class="input-group">
+          <input
+            type="email"
+            name="email"
+            id="email"
+            placeholder="Email Address"
+            value="user@mail.com"
+            required
+          />
+        </div>
+        <div class="input-group">
+          <input
+            type="password"
+            name="password"
+            id="password"
+            placeholder="Password"
+            value="password"
+            required
+          />
+        </div>
+        <div class="input-group" id="confirm-password-group">
+          <input
+            type="password"
+            id="confirm-password"
+            placeholder="Confirm Password"
+          />
+        </div>
+        <button type="submit" class="submit-btn" id="submit-btn">Login</button>
+      </form>
+    </div>
+
+    <script>
+      // --- Dark Mode Logic ---
+      const themeToggleBtn = document.getElementById("theme-toggle");
+
+      // Set the correct icon on initial load
+      if (localStorage.getItem("dataforge_theme") === "dark") {
+        themeToggleBtn.textContent = "☀️";
+      }
+
+      themeToggleBtn.addEventListener("click", (e) => {
+        const htmlTag = document.documentElement;
+        htmlTag.classList.toggle("dark-theme");
+
+        if (htmlTag.classList.contains("dark-theme")) {
+          e.target.textContent = "☀️";
+          localStorage.setItem("dataforge_theme", "dark");
+        } else {
+          e.target.textContent = "🌙";
+          localStorage.setItem("dataforge_theme", "light");
+        }
+      });
+
+      // --- Authentication View Logic ---
+      const toggleBtn = document.getElementById("toggle-view-btn");
+      const formTitle = document.getElementById("form-title");
+      const confirmGroup = document.getElementById("confirm-password-group");
+      const confirmInput = document.getElementById("confirm-password");
+      const submitBtn = document.getElementById("submit-btn");
+      const authForm = document.getElementById("auth-form");
+      const emailInput = document.getElementById("email");
+      const passwordInput = document.getElementById("password");
+      const serverError = document.querySelector(".server-error");
+      let isLoginView = true;
+
+      toggleBtn.addEventListener("click", () => {
+        isLoginView = !isLoginView;
+        if (serverError) serverError.style.display = "none";
+
+        if (isLoginView) {
+          formTitle.innerText = "Login to Dashboard";
+          toggleBtn.innerText = "Switch to Register";
+          submitBtn.innerText = "Login";
+          confirmGroup.style.display = "none";
+          confirmInput.removeAttribute("required");
+          authForm.action = "/login";
+          emailInput.value = "user@mail.com";
+          passwordInput.value = "password";
+        } else {
+          formTitle.innerText = "Create an Account";
+          toggleBtn.innerText = "Switch to Login";
+          submitBtn.innerText = "Register";
+          confirmGroup.style.display = "block";
+          confirmInput.setAttribute("required", "true");
+          authForm.action = "/register";
+          emailInput.value = "";
+          passwordInput.value = "";
+        }
+      });
+
+      authForm.addEventListener("submit", (e) => {
+        if (
+          !isLoginView &&
+          document.getElementById("password").value !== confirmInput.value
+        ) {
+          e.preventDefault();
+          const error = document.getElementById("error-msg");
+          error.style.display = "block";
+        }
+      });
+    </script>
+
+    <div class="footer">
+      Created by the representatives of <span>DataForge Pioneers</span>.
+    </div>
+    <style>
+      .toast {
+        position: fixed;
+        top: -100px; /* Hidden above the screen */
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: var(--accent-color);
+        color: var(--bg-primary);
+        padding: 14px 28px;
+        border-radius: 50px;
+        font-weight: bold;
+        font-size: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        z-index: 9999;
+        transition: top 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+      .toast.show {
+        top: 24px; /* Slides down perfectly into view */
+      }
+    </style>
+
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        // 1. Check the URL for our secret alert messages
+        const urlParams = new URLSearchParams(window.location.search);
+        const alertType = urlParams.get("alert");
+
+        if (alertType) {
+          // 2. Create the notification element
+          const toast = document.createElement("div");
+          toast.className = "toast";
+
+          if (alertType === "login")
+            toast.innerHTML = "✅ Welcome back to DataForge!";
+          if (alertType === "register")
+            toast.innerHTML = "🎉 Account created successfully!";
+          if (alertType === "logout")
+            toast.innerHTML = "👋 Successfully logged out!";
+
+          document.body.appendChild(toast);
+
+          // 3. Trigger the slide-down animation
+          setTimeout(() => toast.classList.add("show"), 100);
+
+          // 4. Wait 3 seconds, slide back up, and clean the URL
+          setTimeout(() => {
+            toast.classList.remove("show");
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname,
+            );
+          }, 3000);
+        }
+      });
+    </script>
+  </body>
+</html>

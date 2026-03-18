@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Data Analyzer - DataForge Pioneers</title>
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <!-- Plotly & Axios -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+      /* Base Variables */
+      :root {
+        --bg-primary: #faf9f6;
+        --input-bg: #eaeaea;
+        --input-focus-bg: #ffffff;
+        --text-main: #333333;
+        --accent-color: #2d2d2d;
+        --user-bubble: #f3f4f6;
+        --ai-bubble: transparent;
+        --border-color: #e5e7eb;
+        --modal-overlay: rgba(0, 0, 0, 0.65);
+      }
+
+      /* Dark Theme Variables */
+      html.dark-theme body {
+        --bg-primary: #121212;
+        --input-bg: #1e1e1e;
+        --input-focus-bg: #2a2a2a;
+        --text-main: #e0e0e0;
+        --accent-color: #4a90e2;
+        --user-bubble: #1e1e1e;
+        --border-color: #333333;
+        --modal-overlay: rgba(0, 0, 0, 0.85);
+      }
+      /* Ensure the chat active state also respects the new dark theme root */
+      html.dark-theme body.chat-active .input-box {
+        background-color: var(--input-focus-bg);
+        border-color: var(--border-color);
+      }
+
+      body {
+        background-color: var(--bg-primary);
+        color: var(--text-main);
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+        height: 100vh;
+        overflow-x: hidden;
+        transition: 0.3s;
+      }
+
+      /* Buttons & Inputs */
+      #theme-toggle {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        background: var(--input-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+        border-radius: 50%;
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+        cursor: pointer;
+        z-index: 1000;
+      }
+      #search-container {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40vw;
+        min-width: 400px;
+        transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+        z-index: 100;
+      }
+      body.chat-active #search-container {
+        top: 40px;
+        transform: translate(-50%, 0);
+      }
+      .input-box {
+        display: flex;
+        align-items: center;
+        background-color: var(--input-bg);
+        border-radius: 50px;
+        padding: 8px 12px 8px 16px;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+      }
+      body.chat-active .input-box {
+        background-color: var(--input-focus-bg);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        border-color: var(--border-color);
+      }
+
+      #upload-btn {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        padding-right: 12px;
+        transition: transform 0.2s;
+      }
+      #upload-btn:hover {
+        transform: scale(1.1);
+      }
+      #user-input {
+        flex-grow: 1;
+        border: none;
+        background: transparent;
+        font-size: 16px;
+        color: var(--text-main);
+        outline: none;
+      }
+      #submit-btn {
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      /* Chat Feed */
+      #chat-feed {
+        margin-top: 160px;
+        padding: 20px 15%;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s ease 0.3s;
+        padding-bottom: 100px;
+      }
+      body.chat-active #chat-feed {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .message-row {
+        display: flex;
+        width: 100%;
+      }
+      .message-row.user {
+        justify-content: flex-end;
+      }
+      .message-row.ai {
+        justify-content: flex-start;
+      }
+      .message-bubble {
+        max-width: 80%;
+        padding: 16px 20px;
+        line-height: 1.6;
+        font-size: 16px;
+        position: relative;
+      }
+      .message-row.user .message-bubble {
+        background-color: var(--user-bubble);
+        border-radius: 20px 20px 4px 20px;
+      }
+      .message-row.ai .message-bubble {
+        background-color: var(--ai-bubble);
+        border-radius: 8px;
+        width: 100%;
+      }
+
+      /* Graph Card & Interactive Elements */
+      .chat-graph-card {
+        background: var(--input-focus-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 16px;
+        margin-top: 12px;
+        width: 100%;
+        min-height: 450px;
+        position: relative;
+      }
+
+      .expand-icon {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        font-size: 18px;
+        cursor: pointer;
+        z-index: 50;
+        color: var(--text-main);
+        background: var(--input-bg);
+        border-radius: 6px;
+        padding: 4px 8px;
+        border: 1px solid var(--border-color);
+        transition: 0.2s;
+      }
+      .expand-icon:hover {
+        background: var(--text-main);
+        color: var(--bg-primary);
+      }
+
+      .compare-checkbox {
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        transform: scale(1.5);
+        cursor: pointer;
+        z-index: 50;
+      }
+
+      /* Floating Compare Button */
+      #floating-compare-btn {
+        position: fixed;
+        bottom: -80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: var(--accent-color);
+        color: white;
+        padding: 14px 32px;
+        border-radius: 50px;
+        border: none;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        transition: bottom 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        z-index: 900;
+      }
+      #floating-compare-btn.visible {
+        bottom: 40px;
+      }
+
+      /* Modal Overlay */
+      #modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: var(--modal-overlay);
+        z-index: 2000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+      #modal-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      #modal-content {
+        background-color: var(--bg-primary);
+        width: 85vw;
+        height: 85vh;
+        border-radius: 16px;
+        padding: 24px;
+        padding-top: 64px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--border-color);
+      }
+      #close-modal {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        font-size: 24px;
+        cursor: pointer;
+        color: var(--text-main);
+        z-index: 100;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        transition: 0.2s;
+      }
+      #close-modal:hover {
+        background: var(--accent-color);
+        color: white;
+      }
+      #modal-graph-container {
+        flex-grow: 1;
+        width: 100%;
+        height: 100%;
+      }
+
+      .spinner {
+        border: 3px solid rgba(0, 0, 0, 0.1);
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border-left-color: var(--accent-color);
+        animation: spin 1s linear infinite;
+        display: inline-block;
+        vertical-align: middle;
+        margin-right: 10px;
+      }
+      body.dark-theme .spinner {
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-left-color: var(--accent-color);
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+    <script>
+      // Check local storage immediately to prevent white flash on reload
+      if (localStorage.getItem("dataforge_theme") === "dark") {
+        document.documentElement.classList.add("dark-theme");
+      }
+    </script>
+  </head>
+  <body>
+    <div
+      style="
+        position: fixed;
+        top: 24px;
+        left: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: bold;
+        font-size: 20px;
+        z-index: 1000;
+        color: var(--text-main);
+      "
+    >
+      <img
+        src="/logo.svg"
+        onerror="this.src = '/logo.png'"
+        alt="DataForge Logo"
+        style="
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          object-fit: cover;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        "
+      />
+      DataForge Pioneers
+    </div>
+
+    <a
+      href="/logout"
+      id="logout-btn"
+      style="
+        position: fixed;
+        top: 24px;
+        right: 80px;
+        background: var(--input-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+        border-radius: 20px;
+        padding: 8px 16px;
+        font-size: 14px;
+        text-decoration: none;
+        font-weight: bold;
+        z-index: 1000;
+        transition: 0.2s;
+      "
+      >Logout</a
+    >
+    <button id="theme-toggle" title="Toggle Dark Mode">🌙</button>
+
+    <div id="search-container">
+      <div class="input-box">
+        <input
+          type="file"
+          id="csv-upload"
+          accept=".csv"
+          style="display: none"
+        />
+        <button id="upload-btn" title="Upload Dataset">📎</button>
+        <input
+          type="text"
+          id="user-input"
+          placeholder="Upload a CSV, then ask for trends..."
+          autocomplete="off"
+        />
+        <button id="submit-btn">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="chat-feed"></div>
+
+    <!-- The Compare Action Button -->
+    <button id="floating-compare-btn">Compare Selected Graphs</button>
+
+    <!-- The Fullscreen Graph Modal -->
+    <div id="modal-overlay">
+      <div id="modal-content">
+        <button id="close-modal">&times;</button>
+        <div id="modal-graph-container"></div>
+      </div>
+    </div>
+
+    <script>
+      const inputField = document.getElementById("user-input");
+      const submitBtn = document.getElementById("submit-btn");
+      const uploadBtn = document.getElementById("upload-btn");
+      const csvUpload = document.getElementById("csv-upload");
+      const chatFeed = document.getElementById("chat-feed");
+      const modalOverlay = document.getElementById("modal-overlay");
+      const compareBtn = document.getElementById("floating-compare-btn");
+
+      let isChatActive = false;
+      let graphCounter = 0;
+      let selectedGraphsForCompare = {}; // Stores Plotly data for checked graphs
+
+      // Dark Mode
+      document.getElementById("theme-toggle").addEventListener("click", (e) => {
+        document.body.classList.toggle("dark-theme");
+        e.target.textContent = document.body.classList.contains("dark-theme")
+          ? "☀️"
+          : "🌙";
+      });
+
+      // Modal Logic
+      document.getElementById("close-modal").addEventListener("click", () => {
+        modalOverlay.classList.remove("active");
+        document.getElementById("modal-graph-container").innerHTML = "";
+      });
+
+      function openModalWithGraph(plotData) {
+        modalOverlay.classList.add("active");
+        Plotly.newPlot(
+          "modal-graph-container",
+          plotData.data,
+          plotData.layout,
+          { responsive: true, displayModeBar: true },
+        );
+      }
+
+      function activateChat() {
+        if (!isChatActive) {
+          document.body.classList.add("chat-active");
+          isChatActive = true;
+        }
+      }
+
+      inputField.addEventListener("focus", activateChat);
+
+      // CSV Upload Logic
+      uploadBtn.addEventListener("click", () => csvUpload.click());
+      csvUpload.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        chatFeed.innerHTML = "";
+        graphCounter = 0;
+        selectedGraphsForCompare = {};
+        compareBtn.classList.remove("visible");
+
+        activateChat();
+        const userRow = addMessage(
+          "user",
+          `Uploaded new dataset: <strong>${file.name}</strong>`,
+        );
+        setTimeout(() => {
+          userRow.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 600);
+
+        const formData = new FormData();
+        formData.append("dataset", file);
+
+        try {
+          const res = await axios.post("/upload", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          const aiRow = addMessage(
+            "ai",
+            `✅ ${res.data.message} DataForger is ready to analyze the new data.`,
+          );
+          setTimeout(() => {
+            aiRow.scrollIntoView({ behavior: "smooth", block: "center" });
+          }, 100);
+        } catch (err) {
+          addMessage("ai", `❌ Failed to upload dataset.`);
+        }
+        csvUpload.value = "";
+      });
+
+      function addMessage(sender, text) {
+        const row = document.createElement("div");
+        row.className = `message-row ${sender}`;
+        row.innerHTML = `<div class="message-bubble">${sender === "ai" ? "<strong>DataForger</strong><br><br>" : ""}${text}</div>`;
+        chatFeed.appendChild(row);
+        window.scrollTo({
+          top: document.body.scrollHeight,
+          behavior: "smooth",
+        });
+        return row;
+      }
+
+      // --- Core Graph Creation Logic ---
+      function renderGraphCard(parentBubble, graphJsonData) {
+        graphCounter++;
+        const graphId = `graph-${graphCounter}`;
+        const plotData = JSON.parse(graphJsonData);
+
+        // 1. The Wrapper (Holds the graph + our custom UI buttons)
+        const wrapperDiv = document.createElement("div");
+        wrapperDiv.className = "chat-graph-card";
+
+        // 2. The Inner Div (Strictly for Plotly to draw inside)
+        const plotContainer = document.createElement("div");
+        plotContainer.id = graphId;
+        plotContainer.style.width = "100%";
+        plotContainer.style.height = "100%";
+        wrapperDiv.appendChild(plotContainer);
+
+        // 3. The Expand Button
+        const expandBtn = document.createElement("div");
+        expandBtn.className = "expand-icon";
+        expandBtn.innerHTML = "⛶ Fullscreen";
+        expandBtn.onclick = () => openModalWithGraph(plotData);
+        wrapperDiv.appendChild(expandBtn);
+
+        // 4. The Compare Checkbox
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "compare-checkbox";
+        checkbox.title = "Select to Compare";
+        checkbox.onchange = (e) => {
+          if (e.target.checked) {
+            selectedGraphsForCompare[graphId] = plotData;
+          } else {
+            delete selectedGraphsForCompare[graphId];
+          }
+
+          // Show floating button if 2 or more graphs are selected
+          if (Object.keys(selectedGraphsForCompare).length >= 2) {
+            compareBtn.classList.add("visible");
+          } else {
+            compareBtn.classList.remove("visible");
+          }
+        };
+        wrapperDiv.appendChild(checkbox);
+
+        parentBubble.appendChild(wrapperDiv);
+
+        // Render Plotly WITH the mode bar enabled (Standard Formatting)
+        Plotly.newPlot(graphId, plotData.data, plotData.layout, {
+          responsive: true,
+          displayModeBar: true,
+        });
+      }
+
+      // --- Compare Graphs Execution (Powered by AI) ---
+      compareBtn.addEventListener("click", () => {
+        let topics = [];
+        let keys = Object.keys(selectedGraphsForCompare);
+
+        keys.forEach((key) => {
+          let layout = selectedGraphsForCompare[key].layout;
+          // Extract titles to tell the AI exactly what to compare
+          let title =
+            layout && layout.title && layout.title.text
+              ? layout.title.text.replace(/<[^>]*>?/gm, "")
+              : "selected data";
+          topics.push(`"${title}"`);
+        });
+
+        // The complex prompt for Gemini (Hidden from the UI)
+        const hiddenQuery = `Create a single, unified comparative graph that analyzes and combines these aspects: ${topics.join(" AND ")}. Choose the best visualization type (e.g., grouped bar chart, multi-axis chart) so they share the same graph logically.`;
+
+        // The sleek display text for the Wow Factor!
+        const displayMessage = `✨ Auto-Compare: ${topics.join(" vs ")}`;
+
+        // Clean up the UI
+        document
+          .querySelectorAll(".compare-checkbox")
+          .forEach((cb) => (cb.checked = false));
+        selectedGraphsForCompare = {};
+        compareBtn.classList.remove("visible");
+
+        // Send both the hidden query and display message to our handler
+        handleSubmission(hiddenQuery, displayMessage);
+      });
+
+      // --- Form Submission Logic ---
+      async function handleSubmission(
+        customQuery = null,
+        customDisplay = null,
+      ) {
+        // Prevent button click event objects from being treated as text
+        if (customQuery && typeof customQuery !== "string") customQuery = null;
+
+        const query = customQuery || inputField.value.trim();
+        if (!query) return;
+
+        // Display the sleek message, but send the complex query to the AI
+        const displayText = customDisplay || query;
+        addMessage("user", displayText);
+        inputField.value = "";
+
+        const loadingRow = document.createElement("div");
+        loadingRow.className = "message-row ai";
+        loadingRow.id = "current-loading";
+        loadingRow.innerHTML = `<div class="message-bubble"><strong>DataForger</strong><br><br><span class="spinner"></span> <span id="loading-text">Loading your Request...</span></div>`;
+        chatFeed.appendChild(loadingRow);
+
+        // Wait for the search bar UI transition to finish, then smoothly center the chat feed!
+        setTimeout(() => {
+          loadingRow.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 600);
+
+        const textTimer1 = setTimeout(() => {
+          document.getElementById("loading-text").innerText =
+            "Analyzing Data & Drawing Conclusions...";
+        }, 3000);
+        const textTimer2 = setTimeout(() => {
+          document.getElementById("loading-text").innerText =
+            "Generating Graphs...";
+        }, 9000);
+
+        try {
+          const response = await axios.post("/api/chat", { query: query });
+          clearTimeout(textTimer1);
+          clearTimeout(textTimer2);
+
+          const data = response.data;
+          const bubble = loadingRow.querySelector(".message-bubble");
+          bubble.innerHTML = `<strong>DataForger</strong><br><br>${data.primary_text}`;
+          loadingRow.removeAttribute("id");
+
+          if (data.primary_graph_json) {
+            renderGraphCard(bubble, data.primary_graph_json);
+          }
+
+          if (data.bonus_text) {
+            const bonusRow = addMessage("ai", data.bonus_text);
+            if (data.bonus_graph_json) {
+              renderGraphCard(
+                bonusRow.querySelector(".message-bubble"),
+                data.bonus_graph_json,
+              );
+            }
+          }
+
+          // Final autoscroll snap once everything is fully generated
+          setTimeout(() => {
+            window.scrollTo({
+              top: document.body.scrollHeight,
+              behavior: "smooth",
+            });
+          }, 300);
+        } catch (error) {
+          loadingRow.innerHTML = `<div class="message-bubble"><strong>DataForger</strong><br><br>Connection to the Python analysis engine failed. Is the backend running?</div>`;
+        }
+      }
+
+      submitBtn.addEventListener("click", handleSubmission);
+      inputField.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") handleSubmission();
+      });
+      // --- Upgraded Dark Mode with LocalStorage ---
+      const themeToggleBtn = document.getElementById("theme-toggle");
+
+      // 1. Set the correct icon on initial load
+      if (localStorage.getItem("dataforge_theme") === "dark") {
+        themeToggleBtn.textContent = "☀️";
+      }
+
+      // 2. Handle clicks and save to memory
+      themeToggleBtn.addEventListener("click", (e) => {
+        const htmlTag = document.documentElement;
+        htmlTag.classList.toggle("dark-theme");
+
+        if (htmlTag.classList.contains("dark-theme")) {
+          e.target.textContent = "☀️";
+          localStorage.setItem("dataforge_theme", "dark"); // Save it!
+        } else {
+          e.target.textContent = "🌙";
+          localStorage.setItem("dataforge_theme", "light"); // Save it!
+        }
+      });
+    </script>
+    <style>
+      .toast {
+        position: fixed;
+        top: -100px; /* Hidden above the screen */
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: var(--accent-color);
+        color: var(--bg-primary);
+        padding: 14px 28px;
+        border-radius: 50px;
+        font-weight: bold;
+        font-size: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        z-index: 9999;
+        transition: top 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+      .toast.show {
+        top: 24px; /* Slides down perfectly into view */
+      }
+    </style>
+
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        // 1. Check the URL for our secret alert messages
+        const urlParams = new URLSearchParams(window.location.search);
+        const alertType = urlParams.get("alert");
+
+        if (alertType) {
+          // 2. Create the notification element
+          const toast = document.createElement("div");
+          toast.className = "toast";
+
+          if (alertType === "login")
+            toast.innerHTML = "✅ Welcome back to DataForge!";
+          if (alertType === "register")
+            toast.innerHTML = "🎉 Account created successfully!";
+          if (alertType === "logout")
+            toast.innerHTML = "👋 Successfully logged out!";
+
+          document.body.appendChild(toast);
+
+          // 3. Trigger the slide-down animation
+          setTimeout(() => toast.classList.add("show"), 100);
+
+          // 4. Wait 3 seconds, slide back up, and clean the URL
+          setTimeout(() => {
+            toast.classList.remove("show");
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname,
+            );
+          }, 3000);
+        }
+      });
+    </script>
+  </body>
+</html>
